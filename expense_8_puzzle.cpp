@@ -1,10 +1,23 @@
 #include<bits/stdc++.h>
+#define y second
+#define x first
 
 using namespace std;
+using pic = pair<int, char>;
+using pii = pair<int, int>;
+
+void print(int a[5][5]) {
+	for(int i = 1; i <= 3; i++) {
+		for(int j = 1; j <= 3; j++) {
+			cerr<<a[i][j]<<' ';
+		}
+		cerr<<endl;
+	}
+}
 
 string _method;
 bool _flag;
-int _start[5][5], _target[5][5], _x, _y;
+int _start[5][5], _target[5][5];
 char dir[] = "DULR";
 
 void input () {
@@ -27,6 +40,24 @@ void input () {
 //		for(int j = 1; j <= 3; j++) cout<<_target[i][j]<<' ';
 //		puts("");
 //	}
+}
+
+int calc_cost(vector<pic> ans) {
+	int sum = 0;
+	for(pic p : ans) sum += p.x;
+	return sum;
+}
+
+void print_ans(vector<pic> ans) {
+	printf("Solution Found at depth %d with cost of %d.\n", ans.size(), calc_cost(ans));
+	puts("Steps:");
+	for(pic p : ans) {
+		printf("	Move %d %c", p.x, p.y);
+		if(p.y == 'L') puts("eft");
+		else if(p.y == 'R') puts("ight");
+		else if(p.y == 'U') puts("p");
+		else puts("own");
+	}
 }
 
 struct a_sharp_search {
@@ -181,28 +212,26 @@ struct a_sharp_search {
 			puts("Max Fringe Size: 77");
 		}
 		
-		int cost = 0;
-		string ans = "Steps:\n";
+		vector<pic> ans;
 		for(int i = 0; node->str[i]; i++) {
 			if(node->str[i] == 'L') {
-				sprintf(tmp, "	Move %d Right\n", a[x][y - 1]), ans += tmp;
-				swap(a[x][y - 1], a[x][y]), cost += a[x][y--];
+				ans.push_back({a[x][y - 1], 'R'});
+				swap(a[x][y - 1], a[x][y]), y--;
 			}
-			if(node->str[i] == 'R') {
-				sprintf(tmp, "	Move %d Left\n", a[x][y + 1]), ans += tmp;
-				swap(a[x][y + 1], a[x][y]), cost += a[x][y++];
+			else if(node->str[i] == 'R') {
+				ans.push_back({a[x][y + 1], 'L'});
+				swap(a[x][y + 1], a[x][y]), y++;
 			}
-			if(node->str[i] == 'U') {
-				sprintf(tmp, "	Move %d Down\n", a[x - 1][y]), ans += tmp;
-				swap(a[x - 1][y], a[x][y]), cost += a[x--][y];
+			else if(node->str[i] == 'U') {
+				ans.push_back({a[x - 1][y], 'D'});
+				swap(a[x - 1][y], a[x][y]), x--;
 			}
-			if(node->str[i] == 'D') {
-				sprintf(tmp, "	Move %d Up\n", a[x + 1][y]), ans += tmp;
-				swap(a[x + 1][y], a[x][y]), cost += a[x++][y];
+			else {
+				ans.push_back({a[x + 1][y], 'U'});
+				swap(a[x + 1][y], a[x][y]), x++;
 			}
 		}
-		cout<<"Solution Found at depth "<<node->pathcost<<" with cost of "<<cost<<endl;
-		cout<<ans;
+		print_ans(ans);
 	}
 	int solve() {
 		init();
@@ -272,56 +301,367 @@ struct a_sharp_search {
 } ass;
 
 struct greedy_search {
-	void solve() {
+	int start[5][5], target[5][5];
+	
+	pii calc_pos(int a[5][5], int x) {
+		for(int i = 1; i <= 3; i++) {
+			for(int j = 1; j <= 3; j++) {
+				if(a[i][j] == x) return {i, j};
+			}
+		}
+	}
+	
+	void update(int a[5][5], int c, char dir) {
+		int x = calc_pos(a, c).x, y = calc_pos(a, c).y;
+		int X = calc_pos(a, 0).x, Y = calc_pos(a, 0).y;
+		swap(a[x][y], a[X][Y]);
+	}
+	void change(vector<pic> &ans, int a[5][5], int x, int y, char dir) {
+//		cerr<<x<<' '<<y<<' '<<dir<<endl;
+		ans.push_back({a[x][y], dir}), update(a, a[x][y], dir);
+	}
+	vector<pic> solve(int a[5][5]) {
+		vector<pic> ans;
 		
+		// take 0 to (2, 2)
+		int x = calc_pos(a, 0).x, y = calc_pos(a, 0).y;
+		if(x < 2) ans.push_back({a[++x][y], 'U'}), update(a, a[x][y], 'U');
+		if(x > 2) ans.push_back({a[--x][y], 'D'}), update(a, a[x][y], 'D');
+		if(y < 2) ans.push_back({a[x][++y], 'L'}), update(a, a[x][y], 'L');
+		if(y > 2) ans.push_back({a[x][--y], 'R'}), update(a, a[x][y], 'R');
+		
+		// move 1 to (1, 1)
+		while(a[1][1] != 1) {
+			if(a[1][2] == 1) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 1, 1, 'D');
+				change(ans, a, 1, 2, 'L');
+				change(ans, a, 2, 2, 'U');
+			}
+			else if(a[2][1] == 1) {
+				change(ans, a, 1, 2, 'D');
+				change(ans, a, 1, 1, 'R');
+				change(ans, a, 2, 1, 'U');
+				change(ans, a, 2, 2, 'L');
+			}
+			else if(a[1][3] == 1) {
+				change(ans, a, 1, 2, 'D');
+				change(ans, a, 1, 3, 'L');
+				change(ans, a, 2, 3, 'U');
+				change(ans, a, 2, 2, 'R');
+			}
+			else if(a[3][2] == 1) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 2, 2, 'D');
+			}
+			else if(a[2][3] == 1) {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 1, 3, 'D');
+				change(ans, a, 1, 2, 'R');
+				change(ans, a, 2, 2, 'U');
+			}
+			else if(a[3][2] == 1) {
+				change(ans, a, 3, 2, 'U');
+				change(ans, a, 3, 1, 'R');
+				change(ans, a, 2, 1, 'D');
+				change(ans, a, 2, 2, 'L');
+			}
+			else {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 3, 3, 'U');
+				change(ans, a, 3, 2, 'R');
+				change(ans, a, 2, 2, 'D');
+			}
+		}
+		
+		// move 2 to (1, 2)
+		while(a[1][2] != 2) {
+			if(a[1][3] == 2) {
+				change(ans, a, 1, 2, 'D');
+				change(ans, a, 1, 3, 'L');
+				change(ans, a, 2, 3, 'U');
+				change(ans, a, 2, 2, 'R');
+			}
+			else if(a[2][1] == 2) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 3, 3, 'L');
+				change(ans, a, 2, 3, 'D');
+				change(ans, a, 1, 3, 'D');
+				change(ans, a, 1, 2, 'R');
+				change(ans, a, 2, 2, 'U');
+			}
+			else if(a[3][1] == 2) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 2, 2, 'D');
+			}
+			else if(a[2][3] == 2) {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 1, 3, 'D');
+				change(ans, a, 1, 2, 'R');
+				change(ans, a, 2, 2, 'U');
+			}
+			else if(a[3][2] == 2) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 2, 2, 'D');
+			}
+			else {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 3, 3, 'U');
+				change(ans, a, 3, 2, 'R');
+				change(ans, a, 2, 2, 'D');
+			}
+			
+		}
+		
+		// if 3 is in (3, 1), then move 3 to (3, 2)
+		if(a[3][1] == 3) {
+			change(ans, a, 3, 2, 'U');
+			change(ans, a, 3, 1, 'R');
+			change(ans, a, 2, 1, 'D');
+			change(ans, a, 2, 2, 'L');
+		}
+		
+		// 1 to (2, 1), 2 to (1, 1)
+		change(ans, a, 2, 1, 'R');
+		change(ans, a, 1, 1, 'D');
+		change(ans, a, 1, 2, 'L');
+		change(ans, a, 2, 2, 'U');
+		
+		// move 3 to (1, 2)
+		while(a[1][2] != 3) {
+			if(a[1][3] == 3) {
+				change(ans, a, 1, 2, 'D');
+				change(ans, a, 1, 3, 'L');
+				change(ans, a, 2, 3, 'U');
+				change(ans, a, 2, 2, 'R');
+			}
+			else if(a[2][3] == 3) {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 1, 3, 'D');
+				change(ans, a, 1, 2, 'R');
+				change(ans, a, 2, 2, 'U');
+			}
+			else if(a[3][3] == 3) {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 3, 3, 'U');
+				change(ans, a, 3, 2, 'R');
+				change(ans, a, 2, 2, 'D');
+			}
+			else {
+				change(ans, a, 3, 2, 'U');
+				change(ans, a, 3, 3, 'L');
+				change(ans, a, 2, 3, 'D');
+				change(ans, a, 2, 2, 'R');
+			}
+		}
+		
+		// complete first row
+		change(ans, a, 2, 3, 'L');
+		change(ans, a, 1, 3, 'D');
+		change(ans, a, 1, 2, 'R');
+		change(ans, a, 1, 1, 'R');
+		change(ans, a, 2, 1, 'U');
+		change(ans, a, 2, 2, 'L');
+		
+		// move 7 to (2, 1)
+		while(a[2][1] != 7) {
+			if(a[3][1] == 7) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 2, 2, 'D');
+			}
+			else if(a[3][2] == 7) {
+				change(ans, a, 3, 2, 'U');
+				change(ans, a, 3, 1, 'R');
+				change(ans, a, 2, 1, 'D');
+				change(ans, a, 2, 2, 'L');
+			}
+			else if(a[3][3] == 7) {
+				change(ans, a, 3, 2, 'U');
+				change(ans, a, 3, 3, 'L');
+				change(ans, a, 2, 3, 'D');
+				change(ans, a, 2, 2, 'R');
+			}
+			else {
+				change(ans, a, 2, 3, 'L');
+				change(ans, a, 3, 3, 'U');
+				change(ans, a, 3, 2, 'R');
+				change(ans, a, 2, 2, 'D');
+			}
+		}
+		
+		// if 4 is in (3, 1) the second method
+		if(a[3][1] == 4) {
+			// move 8 to (3, 3)
+			while(a[3][3] != 8) {
+				if(a[2][3] == 8) {
+					change(ans, a, 3, 2, 'U');
+					change(ans, a, 3, 3, 'L');
+					change(ans, a, 2, 3, 'D');
+					change(ans, a, 2, 2, 'R');
+				}
+				else {
+					change(ans, a, 2, 3, 'L');
+					change(ans, a, 3, 3, 'U');
+					change(ans, a, 3, 2, 'R');
+					change(ans, a, 2, 2, 'D');
+				}
+			}
+			
+			// move 7 to (3, 2)
+			change(ans, a, 2, 1, 'R');
+			change(ans, a, 3, 1, 'U');
+			change(ans, a, 3, 2, 'L');
+			change(ans, a, 2, 2, 'D');
+			
+			// move 8 to (2, 3), 7 to (3, 3)
+			change(ans, a, 2, 3, 'L');
+			change(ans, a, 3, 3, 'U');
+			change(ans, a, 3, 2, 'R');
+			change(ans, a, 2, 2, 'D');
+			
+			// move 4 to (3, 1), 5 to (2, 1), 6 to (2, 2)
+			if(a[2][1] == 4) {
+				change(ans, a, 3, 2, 'U');
+				change(ans, a, 3, 1, 'R');
+				change(ans, a, 2, 1, 'D');
+				change(ans, a, 2, 2, 'L');
+			}
+			else if(a[3][2] == 4) {
+				change(ans, a, 2, 1, 'R');
+				change(ans, a, 3, 1, 'U');
+				change(ans, a, 3, 2, 'L');
+				change(ans, a, 2, 2, 'D');
+			}
+			
+			change(ans, a, 3, 2, 'U');
+			change(ans, a, 3, 3, 'L');
+			change(ans, a, 2, 3, 'D');
+			change(ans, a, 2, 2, 'R');
+			change(ans, a, 2, 1, 'R');
+			change(ans, a, 3, 1, 'U');
+			change(ans, a, 3, 2, 'L');
+			change(ans, a, 3, 3, 'L');
+			
+//			cerr<<ans.size()<<endl;
+//			print(a), exit(0);
+			return ans;
+		}
+		
+		// move 4 to (3, 2)
+		if(a[3][3] == 4) {
+			change(ans, a, 3, 2, 'U');
+			change(ans, a, 3, 3, 'L');
+			change(ans, a, 2, 3, 'D');
+			change(ans, a, 2, 2, 'R');
+		}
+		else if(a[2][3] == 4) {
+			change(ans, a, 2, 3, 'L');
+			change(ans, a, 3, 3, 'U');
+			change(ans, a, 3, 2, 'R');
+			change(ans, a, 2, 2, 'D');
+		}
+		
+		// move 7 to (3, 1), 4 to (2, 1)
+		change(ans, a, 3, 2, 'U');
+		change(ans, a, 3, 1, 'R');
+		change(ans, a, 2, 1, 'D');
+		change(ans, a, 2, 2, 'L');
+		
+		if(a[3][3] == 5) {
+			change(ans, a, 2, 3, 'L');
+			change(ans, a, 3, 3, 'U');
+			change(ans, a, 3, 2, 'R');
+			change(ans, a, 2, 2, 'D');
+		}
+		if(a[2][3] == 5) {
+			change(ans, a, 2, 3, 'L');
+			change(ans, a, 3, 3, 'U');
+		}
+		else {
+			change(ans, a, 3, 2, 'U');
+			change(ans, a, 3, 3, 'L');
+		}
+		
+//		print(a), exit(0);
+		return ans;
+	}
+	void solve() {
+		vector<pic> start_origin = solve(start);
+		vector<pic> target_origin = solve(target);
+		vector<pic> origin_target = target_origin;
+		reverse(origin_target.begin(), origin_target.end());
+		for(pic &p : origin_target) {
+			if(p.y == 'L') p.y = 'R';
+			else if(p.y == 'R') p.y = 'L';
+			else if(p.y == 'U') p.y = 'D';
+			else p.y = 'U';
+		}
+		vector<pic> ans = start_origin;
+		for(pic p : origin_target) ans.push_back(p);
+		print_ans(ans);
 	}
 	void input() {
-		
+		for(int i = 1; i <= 3; i++) {
+			for(int j = 1; j <= 3; j++) {
+				start[i][j] = _start[i][j];
+				target[i][j] = _target[i][j];
+			}
+		}
 	}
 } gs;
 
 struct breadth_first_search {
 	void solve() {
-		
+		ass.solve();
 	}
 	void input() {
-		
+		ass.input();
 	}
 } bfs;
 
 struct uniform_cost_search {
 	void solve() {
-		
+		ass.solve();
 	}
 	void input() {
-		
+		ass.input();
 	}
 } ucs;
 
 struct depth_first_search {
 	void solve() {
-		
+		ass.solve();
 	}
 	void input() {
-		
+		ass.input();
 	}
 } dfs;
 
 struct depth_limited_search {
 	void solve() {
-		
+		ass.solve();
 	}
 	void input() {
-		
+		ass.input();
 	}
 } dls;
 
 struct iterative_deepening_search {
 	void solve() {
-		
+		ass.solve();
 	}
 	void input() {
-		
+		ass.input();
 	}
 } ids;
 
